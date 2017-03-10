@@ -75,7 +75,41 @@ export default class Home extends React.Component{
   }
 
   componentDidMount(){
-    var ws = new WebSocket('ws://tim.local.boptown.com:8082');
+    var ws = new WebSocket('wss://sssbpinilla.sssworld-local.com:8082');
+
+    navigator.getUserMedia  = navigator.getUserMedia ||
+                          navigator.webkitGetUserMedia ||
+                          navigator.mozGetUserMedia ||
+                          navigator.msGetUserMedia;
+
+    var mic = document.getElementById("mic");
+    var audioContext = new AudioContext();
+    var audioCtx2 = new AudioContext();
+
+    var errorCallback = function(e) {
+      console.log('Reeeejected!', e);
+    };
+
+    if (navigator.getUserMedia) {
+      navigator.getUserMedia({audio: true}, function(stream) {
+
+        var input = audioContext.createMediaStreamSource(stream);
+        var processor = audioContext.createScriptProcessor(4096, 1, 1);
+        processor.onaudioprocess = function(e){
+          var audio_dataleft = e.inputBuffer.getChannelData(0) || new Float32Array(4096);
+          var audio = {
+            audio:Array.from(audio_dataleft),
+            length:e.inputBuffer.length,
+            sampleRate:e.inputBuffer.sampleRate
+          };
+          ws.send(JSON.stringify(audio));
+        }
+        input.connect(processor);
+        processor.connect(audioContext.destination);
+      }, errorCallback);
+    } else {
+
+    }
 
 
     ws.onopen = () => {
@@ -86,7 +120,7 @@ export default class Home extends React.Component{
 
       var timeout = () => {
         setTimeout(()=>{
-          let ws = new WebSocket('ws://tim.local.boptown.com:8082')
+          let ws = new WebSocket('wss://sssbpinilla.sssworld-local.com:8082')
           if(ws.readyState != 1)
             timeout();
           else
@@ -96,26 +130,45 @@ export default class Home extends React.Component{
       timeout();
     }
 
+
     ws.onmessage = (data, flags) => {
       let obj = JSON.parse(data.data);
       if(obj){
           let Messages = this.state.Messages;
           if(obj.IsMessage){
             Messages.push(obj);
+            this.setState({Messages},()=>{
+              var chat = document.getElementById("Chat");
+              if(chat.children)
+                chat.children[chat.children.length - 1].scrollIntoView();
+                var sound = document.getElementById("sound1");
+                sound.volume = 0.1;
+                sound.src = "/sound.mp3";
+                sound.play();
+            });
           }
           if(obj.GetMessages){
             Messages = obj.Messages;
+            this.setState({Messages},()=>{
+              var chat = document.getElementById("Chat");
+              if(chat.children)
+                chat.children[chat.children.length - 1].scrollIntoView();
+                var sound = document.getElementById("sound1");
+                sound.volume = 0.1;
+                sound.src = "/sound.mp3";
+                sound.play();
+            });
+          }
+          if(obj.audio){
+
+            var source = audioCtx2.createBufferSource();
+            var buffer = audioCtx2.createBuffer(1, obj.length, obj.sampleRate);
+            buffer.getChannelData(0).set(obj.audio);
+            source.buffer = buffer;
+            source.connect(audioCtx2.destination);
+            source.start();
           }
 
-          this.setState({Messages},()=>{
-            var chat = document.getElementById("Chat");
-            if(chat.children)
-              chat.children[chat.children.length - 1].scrollIntoView();
-              var sound = document.getElementById("sound1");
-              sound.volume = 0.1;
-              sound.src = "/sound.mp3";
-              sound.play();
-          });
       }
       // flags.binary will be set if a binary data is received.
       // flags.masked will be set if the data was masked.
