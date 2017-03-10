@@ -1,0 +1,21 @@
+.Chat ul {
+
+}
+
+.Chat li {
+  font-size: 12px;
+  line-height: 20px;
+  padding: 6px 20px;
+  margin: -3px 0;
+  word-wrap: break-word;
+  list-style-position: unset;
+}
+
+ul,ol,li {
+  list-style-type: none;
+  margin-left: 0;
+}
+
+.from{
+  font-weight: 700;
+}
